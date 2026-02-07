@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-user"></i> ข้อมูลของคุณ</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>ชื่อ-นามสกุล:</strong> {{ claimant_data.name }}</p>
+                <p><strong>รหัสผู้ขอ:</strong> <span class="badge bg-secondary">{{ claimant_data.id }}</span></p>
+                <p><strong>รายได้:</strong> {{ "{:,.2f}".format(claimant_data.income) }} บาท</p>
+                <p><strong>ประเภท:</strong> <span class="badge bg-primary">{{ claimant_data.type }}</span></p>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-file-signature"></i> ยื่นคำขอเยียวยา</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">คุณสามารถยื่นคำขอเงินเยียวยาได้ที่นี่</p>
+
+                <form action="/submit-my-claim" method="post">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-paper-plane"></i> ยื่นคำขอใหม่
+                    </button>
+                </form>
+
+                <hr>
+                <div class="alert alert-light mb-0">
+                    <small>
+                        <strong><i class="fas fa-calculator"></i> คุณจะได้รับเงิน:</strong><br>
+                        {% if claimant_data.type == 'รายได้น้อย' %}
+                        <span class="fs-4 text-success fw-bold">6,500 บาท</span>
+                        {% elif claimant_data.type == 'รายได้สูง' %}
+                        <span class="fs-4 text-success fw-bold">
+                            {{ "{:,.2f}".format(claimant_data.income / 5) if (claimant_data.income / 5) <= 20000
+                                else "20,000.00" }} บาท </span>
+                                {% else %}
+                                <span class="fs-4 text-success fw-bold">
+                                    {{ "{:,.2f}".format(claimant_data.income) if claimant_data.income <= 20000
+                                        else "20,000.00" }} บาท </span>
+                                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติคำขอของคุณ</h5>
+                <span class="badge bg-light text-dark">{{ claims|length }} รายการ</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>รหัสคำขอ</th>
+                                <th>วันที่ยื่น</th>
+                                <th class="text-end">เงินที่ได้รับ</th>
+                                <th class="text-center">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in claims %}
+                            <tr>
+                                <td><small class="text-muted">#{{ item.claim_id }}</small></td>
+                                <td><i class="far fa-calendar"></i> {{ item.request_date }}</td>
+                                <td class="text-end fw-bold text-success">
+                                    {{ "{:,.2f}".format(item.compensation) }} ฿
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> {{ item.status }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i><br>
+                                    คุณยังไม่เคยยื่นคำขอ<br>
+                                    <small>กดปุ่ม "ยื่นคำขอใหม่" เพื่อเริ่มต้น</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

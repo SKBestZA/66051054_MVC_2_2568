@@ -40,74 +40,141 @@ class Claimant:
     def __str__(self):
         return f"{self.get_full_name()} ({self.__type})"
 
-def get_all_claimants_as_objects():
-    filepath = os.path.join('model', 'data', 'claimants.csv')
-    df = pd.read_csv(filepath)
-    claimants_list = []
-    
-    for _, row in df.iterrows():
-        person = Claimant(
-            id=str(row['id']),
-            firstname=row['firstname'],
-            lastname=row['lastname'],
-            income=row['income'],
-            c_type=row['type']  # ✅ เปลี่ยนจาก type_=row['type']
-        )
-        claimants_list.append(person)
-        
-    return claimants_list
-
-
 def get_claimant_by_id_as_object(cid: str):
-    filepath = os.path.join('model', 'data', 'claimants.csv')
-    df = pd.read_csv(filepath)
-    row = df[df['id'] == int(cid)]
-    
-    if not row.empty:
-        r = row.iloc[0]
-        return Claimant(
-            id=str(r['id']),
-            firstname=r['firstname'],
-            lastname=r['lastname'],
-            income=r['income'],
-            c_type=r['type']  # ✅ เปลี่ยนจาก type_=r['type']  (ถ้ายังใช้ type_ อยู่)
-        )
-    return None
+    """ค้นหาผู้ขอเยียวยาจาก ID"""
+    try:
+        filepath = os.path.join('model', 'data', 'claimants.csv')
+        
+        # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
+        if not os.path.exists(filepath):
+            print(f"❌ File not found: {filepath}")
+            return None
+        
+        df = pd.read_csv(filepath)
+        
+        # ตรวจสอบว่า cid เป็นตัวเลขหรือไม่
+        if not cid.isdigit():
+            print(f"❌ Invalid ID (not numeric): {cid}")
+            return None
+        
+        # แปลงเป็น int เพื่อเปรียบเทียบ
+        cid_int = int(cid)
+        row = df[df['id'] == cid_int]
+        
+        if not row.empty:
+            r = row.iloc[0]
+            claimant = Claimant(
+                id=str(r['id']),
+                firstname=r['firstname'],
+                lastname=r['lastname'],
+                income=r['income'],
+                c_type=r['type']
+            )
+            print(f"✅ Found claimant: {claimant.get_full_name()}")
+            return claimant
+        else:
+            print(f"❌ No claimant found with ID: {cid}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error in get_claimant_by_id_as_object: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def get_all_claimants_as_objects():
+    """ดึงรายชื่อผู้ขอเยียวยาทั้งหมด"""
+    try:
+        filepath = os.path.join('model', 'data', 'claimants.csv')
+        
+        # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
+        if not os.path.exists(filepath):
+            print(f"❌ File not found: {filepath}")
+            return []
+        
+        df = pd.read_csv(filepath)
+        claimants_list = []
+        
+        for _, row in df.iterrows():
+            person = Claimant(
+                id=str(row['id']),
+                firstname=row['firstname'],
+                lastname=row['lastname'],
+                income=row['income'],
+                c_type=row['type']
+            )
+            claimants_list.append(person)
+        
+        print(f"✅ Loaded {len(claimants_list)} claimants")
+        return claimants_list
+        
+    except Exception as e:
+        print(f"❌ Error in get_all_claimants_as_objects: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 class BaseModel:
-    def save_compensation(self, claim_id:str, amount:float):
+    def save_compensation(self, claim_id: str, amount: float):
         """
         บันทึกผลการคำนวณลงไฟล์ compensations.csv
         """
-        filepath = os.path.join('model', 'data', 'compensations.csv')
+        # 1. ตรวจสอบและสร้างโฟลเดอร์ก่อนเสมอ (กันเหนียว)
+        directory = os.path.join('model', 'data')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            
+        filepath = os.path.join(directory, 'compensations.csv')
 
-        # เตรียมข้อมูลที่จะบันทึก: [รหัสคำขอ, จำนวนเงิน, วันที่คำนวณ]
+        # 2. เตรียมข้อมูล (ตัด calc_date ออกก่อน เพื่อให้ตรงกับ Controller ที่เขียนไว้ตอนแรก)
+        # หรือถ้าจะใส่ calc_date ต้องไปแก้ตอนอ่านไฟล์ (read_csv) ด้วย
         new_data = {
-            'claim_id': [claim_id], 
-            'amount': [amount], 
-            'calc_date': [datetime.now().strftime("%Y-%m-%d")]
+            'claim_id': [str(claim_id)],  # แปลงเป็น str ให้ชัวร์
+            'amount': [float(amount)]     # แปลงเป็น float ให้ชัวร์
         }
         df = pd.DataFrame(new_data)
         
-        # เปิดไฟล์โหมด 'a' (append) เพื่อต่อท้ายข้อมูลเดิม
         try:
-            if not os.path.exists(filepath):
-                # ถ้ายังไม่มีไฟล์: สร้างใหม่ + เขียน Header
+            # 3. เช็คละเอียด: ถ้าไฟล์ไม่มี OR ไฟล์มีแต่ขนาดเป็น 0 (ไฟล์เปล่า)
+            if not os.path.exists(filepath) or os.stat(filepath).st_size == 0:
+                # เขียนใหม่ + มี Header
                 df.to_csv(filepath, index=False, encoding='utf-8')
+                print(f"✅ Created new compensation file and saved claim {claim_id}")
             else:
-                # ถ้ามีไฟล์แล้ว: บันทึกต่อท้าย (mode='a') + ไม่เอา Header (header=False)
+                # มีไฟล์และมีข้อมูลแล้ว -> ต่อท้าย + ไม่มี Header
                 df.to_csv(filepath, mode='a', header=False, index=False, encoding='utf-8')
+                print(f"✅ Appended claim {claim_id} to existing file")
+                
         except Exception as e:
-            print(f"Error saving compensation: {e}")
+            print(f"❌ Error saving compensation: {e}")
+            # ปริ้น traceback เพื่อดูบรรทัดที่ผิด
+            import traceback
+            traceback.print_exc()
 
     def save_claim(self, claim_id: str, claimant_id: int):
-        filepath =os.path.join('model', 'data', 'claims.csv')
-        new_data = {'id': [claim_id], 'claimant_id': [claimant_id], 'request_date': [datetime.now().strftime("%Y-%m-%d")], 'status': ['Approved']}
+        directory = os.path.join('model', 'data')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            
+        filepath = os.path.join(directory, 'claims.csv')
+        
+        # ใช้ datetime ปัจจุบัน
+        new_data = {
+            'id': [str(claim_id)], 
+            'claimant_id': [int(claimant_id)], 
+            'request_date': [datetime.now().strftime("%Y-%m-%d")], 
+            'status': ['Approved']
+        }
         df = pd.DataFrame(new_data)
-        if not os.path.exists(filepath):
-            df.to_csv(filepath, index=False)
-        else:
-            df.to_csv(filepath, mode='a', header=False, index=False)
+        
+        try:
+            if not os.path.exists(filepath) or os.stat(filepath).st_size == 0:
+                df.to_csv(filepath, index=False, encoding='utf-8')
+            else:
+                df.to_csv(filepath, mode='a', header=False, index=False, encoding='utf-8')
+        except Exception as e:
+             print(f"❌ Error saving claim: {e}")
 
 class Claim(BaseModel):
     def __init__(self,income:float):
