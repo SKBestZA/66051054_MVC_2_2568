@@ -40,33 +40,38 @@ class Claimant:
     def __str__(self):
         return f"{self.get_full_name()} ({self.__type})"
 
-# --- Helper Function: โหลดข้อมูลทั้งหมดเป็น List of Objects ---
 def get_all_claimants_as_objects():
-    filepath=os.path.join('model', 'data', 'claiments.csv')
-    df = pd.read_csv()
+    filepath = os.path.join('model', 'data', 'claimants.csv')
+    df = pd.read_csv(filepath)
     claimants_list = []
     
-    # แปลงแต่ละแถวใน Pandas ให้กลายเป็น Object
     for _, row in df.iterrows():
         person = Claimant(
             id=str(row['id']),
             firstname=row['firstname'],
             lastname=row['lastname'],
             income=row['income'],
-            type_=row['type']
+            c_type=row['type']  # ✅ เปลี่ยนจาก type_=row['type']
         )
         claimants_list.append(person)
         
     return claimants_list
 
+
 def get_claimant_by_id_as_object(cid: str):
-    filepath=os.path.join('model', 'data', 'claiments.csv')
-    df = pd.read_csv()
+    filepath = os.path.join('model', 'data', 'claimants.csv')
+    df = pd.read_csv(filepath)
     row = df[df['id'] == int(cid)]
     
     if not row.empty:
         r = row.iloc[0]
-        return Claimant(str(r['id']), r['firstname'], r['lastname'], r['income'], r['type'])
+        return Claimant(
+            id=str(r['id']),
+            firstname=r['firstname'],
+            lastname=r['lastname'],
+            income=r['income'],
+            c_type=r['type']  # ✅ เปลี่ยนจาก type_=r['type']  (ถ้ายังใช้ type_ อยู่)
+        )
     return None
 
 class BaseModel:
