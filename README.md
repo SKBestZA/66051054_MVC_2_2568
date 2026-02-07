@@ -1,2 +1,3 @@
 # 66051054_MVC_2_2568
 Exit exam mvc 2/2568
+how to use : run main.py
